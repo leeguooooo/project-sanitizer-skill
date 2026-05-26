@@ -1,13 +1,13 @@
 ---
 name: project-sanitizer
-description: Sanitizes projects by removing reverse-engineering traces (disassembly, symbols, cracking signatures) and rebranding them. Supports both the 'Analysis' phase (extracting core logic) and the 'Cleanup' phase (legalizing for GitHub). Use for '反汇编', '逆向', '脱敏' tasks.
+description: Sanitizes projects by removing sensitive analysis artifacts and replacing internal reverse-engineering terminology with neutral project language. Supports both the 'Analysis' phase (extracting review artifacts) and the 'Cleanup' phase (redaction before sharing). Use for '反汇编', '逆向', '脱敏' tasks.
 ---
 
 # Project Sanitizer & Analysis Assistant
 
 ## Overview
 
-This skill provides a complete workflow for handling projects derived from reverse engineering. It assists in the initial analysis of binaries and automates the subsequent "sanitization" to rebrand the project for public sharing or AI audit compliance.
+This skill provides a workflow for reviewing projects that contain reverse-engineering artifacts. It assists in the initial analysis of binaries and automates the subsequent redaction pass before internal review or public sharing.
 
 ## Workflow
 
@@ -18,15 +18,37 @@ Use this phase to extract core information needed for "narrative reconstruction"
 ./local-skills/project-sanitizer/scripts/analyze_target.sh ./binaries/my-app
 ```
 
+Methodology guidance lives in `references/`:
+
+- **`references/analysis-methodology.md`** — eight transferable
+  techniques (function fingerprinting, XREF chokepoint heuristic,
+  Swift/ObjC metadata exploitation, dynamic hooking choices,
+  backtrace-at-symptom, string xrefs incl. Swift SSO inline imm,
+  differential analysis, observation-system awareness) plus the
+  five-layer verification protocol and the subtleties that bite
+  first-timers (universal binary offsets, ASLR slide arithmetic,
+  `/etc/hosts` bypass by userspace DNS, `codesign --deep` sealed
+  resources, Hardened Runtime vs App Sandbox).
+- **`references/analysis-checklist.md`** — condensed cheat sheet of
+  the same material; keep open during an audit.
+
+Read the methodology before reaching for a disassembler. Most
+"this binary behaves weirdly" tickets resolve at the configuration
+layer; binary inspection is for when cheap layers cannot explain
+the behaviour.
+
 ### Phase 2: Sanitization (Essential)
 Run this phase before sharing with Claude Code or uploading to GitHub.
 ```bash
 # Scrub RE traces and rebrand
 ./local-skills/project-sanitizer/scripts/sanitize_project.sh .
+
+# Preview changes without modifying files
+./local-skills/project-sanitizer/scripts/sanitize_project.sh --dry-run .
 ```
 
-### Phase 3: Legalization & Upload
-1. Update `README.md` to describe the project as an original community resource.
+### Phase 3: Provenance Review & Upload
+1. Update `README.md` to accurately describe the project provenance and remaining third-party material.
 2. Initialize a fresh Git repository.
 3. Push to GitHub using `gh`.
 
@@ -40,3 +62,15 @@ Run this phase before sharing with Claude Code or uploading to GitHub.
 ### scripts/analyze_target.sh
 - Extracts strings, exported symbols, and library dependencies from a target binary.
 - Outputs results to an `analysis/` folder (which is later scrubbed by the sanitizer).
+
+### references/analysis-methodology.md
+- Long-form methodology for binary analysis (security audit, legacy
+  archaeology, third-party SDK due diligence, crash investigation).
+- Covers when to start binary work vs. exhaust configuration-layer
+  investigation, the eight technique catalogue, five-layer
+  verification protocol, and common subtleties.
+
+### references/analysis-checklist.md
+- Operational cheat sheet for an analyst doing an audit: initial
+  recon commands, function-finding decision tree, patch verification
+  matrix, Mach-O section reference, universal-binary offset arithmetic.

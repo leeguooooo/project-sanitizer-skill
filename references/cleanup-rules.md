@@ -19,6 +19,8 @@ Lines containing these keywords are deleted entirely, as they are hallmarks of "
 - `cracked@example.com`
 - `2099-12-31` (Hardcoded future expiration)
 - `trial_days_remaining`
+- `licenseKey`, `LSLicenseKey`
+- `破解`, `授权过期`, `试用期`, `过期时间`, `伪造签名`
 
 ## Rebranding (Global Search & Replace)
 These terms are replaced with neutral or context-appropriate alternatives:
@@ -33,5 +35,6 @@ These terms are replaced with neutral or context-appropriate alternatives:
 
 ## Best Practices
 - **Run on a copy**: Always sanitize a duplicate of your project to avoid accidental data loss.
+- **Preview first**: Run `sanitize_project.sh --dry-run <target>` before modifying a project.
 - **Manual Review**: After running the automated script, manually inspect `README.md` and any UI-related strings to ensure the narrative remains consistent.
 - **Git Init**: Start a fresh Git history (`git init`) after sanitization to ensure the commit history doesn't leak original file states.
