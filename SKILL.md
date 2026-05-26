@@ -1,6 +1,6 @@
 ---
 name: project-sanitizer
-description: Sanitizes projects by removing sensitive analysis artifacts and replacing internal reverse-engineering terminology with neutral project language. Supports both the 'Analysis' phase (extracting review artifacts) and the 'Cleanup' phase (redaction before sharing). Use for '反汇编', '逆向', '脱敏' tasks.
+description: Binary analysis methodology + project sanitization workflow. Phase 1 covers the analysis playbook (function fingerprinting, XREF chokepoint heuristic, Swift/ObjC metadata exploitation, dynamic hooking trade-offs, backtrace at symptom, string xrefs incl. Swift small-string-optimization, differential analysis, observation-system awareness) and the five-layer verification protocol. Phase 2 removes sensitive analysis artifacts and replaces internal RE terminology with neutral project language before sharing. Use for binary analysis, RE workflows, security audits, '反汇编', '逆向', '脱敏'.
 ---
 
 # Project Sanitizer & Analysis Assistant
