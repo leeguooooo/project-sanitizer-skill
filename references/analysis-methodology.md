@@ -355,6 +355,56 @@ the first place — so never skip it.
 
 ---
 
+## Mutating a C++ container field at runtime (without crashing the target)
+
+Reading a field is safe; *writing* one is where you crash the process.
+The trap is any field whose in-memory form is runtime-dependent — a
+`std::string` (or any small-buffer-optimised container) is the classic
+one, and it will corrupt the heap the moment you blind-write it.
+
+Recall the libc++ `std::string` dual form (technique #3): a short string
+keeps its characters **inline**; a long string stores a **heap pointer**
+at offset +0, size at +8, capacity at +0x10, with the long/short flag in
+the object's last byte. Which form is live is decided at runtime by the
+string's length.
+
+**Why blind-writing crashes.** If you assume "short" and write inline
+ASCII bytes over a field that currently holds a *long* string, you
+overwrite the heap data pointer (and the size word after it) with your
+characters. Nothing faults immediately. Then the next allocator
+operation treats your ASCII as a freelist pointer and the process dies
+with a heap-corruption abort — libc++/libmalloc reports
+`BUG IN CLIENT OF LIBMALLOC: memory corruption of free block`, and the
+fault address is the field's pointer/size region (base+0x8), not your
+write site. The crash is displaced from the cause, which is what makes
+it confusing.
+
+Two safe ways to change such a field:
+
+1. **Rebuild the whole object self-consistently — but read the old flag
+   first.** Write all bytes of the object into one valid form
+   (inline+size for short, ptr+size+cap for long), never leaving a state
+   where the flag disagrees with the contents. Crucially, before
+   overwriting, read the old flag byte: if the old form was *long*, free
+   its heap buffer first, or you leak the block the allocator still
+   thinks is live. Picking the *new* form needs no old-flag read; safely
+   reclaiming the *old* storage does.
+2. **Better — don't overwrite the destination at all; swap the source of
+   the assignment.** Find the upstream call that populates the field
+   (`basic_string::assign` / `operator=` / the constructor) and replace
+   the *source argument* passed into it, letting the library allocate and
+   manage storage. Zero manual heap manipulation means the heap cannot be
+   corrupted. This is almost always the right hijack primitive for a
+   container-typed field: change *what gets assigned*, not the bytes of
+   the destination.
+
+The same reasoning applies to any type that owns a heap resource behind a
+value-typed field (`std::vector`, `shared_ptr` control blocks, Swift
+class-backed properties): patch through the type's own mutation path, not
+by poking its representation.
+
+---
+
 ## Verification: the five layers
 
 After any non-trivial change — a patch, a hook, a configuration tweak —
@@ -423,6 +473,17 @@ some other path rewrites the value 30 seconds later".
   run. It's the same obstacle class as anti-DBI: hook the probe
   (`access`/`stat`/`fopen`) and return "not found", or run on a device
   whose jailbreak is already hidden.
+- **A field reached through a register (`xN+off`) is only that field on
+  the path where `xN` holds the expected base.** Register allocation
+  reuses the same register for different objects across call paths, so
+  `[xN, #off]` at a shared breakpoint can be your struct on one entry
+  and an unrelated object on another. The tell-tale is the *same*
+  `(breakpoint, register, offset)` reading as empty on one fire and
+  populated with something else on another — that is register aliasing,
+  not a field that moved or fills late. Before trusting (let alone
+  writing) such a field, confirm the register's provenance: disassemble
+  back to where `xN` was last loaded and verify it is the object you
+  think it is on *this* path.
 
 ---
 

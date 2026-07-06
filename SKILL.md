@@ -26,8 +26,10 @@ Methodology guidance lives in `references/`:
   backtrace-at-symptom, string xrefs incl. Swift SSO inline imm,
   differential analysis, observation-system awareness), a
   "when the target resists analysis" section (macOS anti-debug,
-  Frida/anti-DBI detection, self-hashing watchdogs), plus the
-  five-layer verification protocol and the subtleties that bite
+  Frida/anti-DBI detection, self-hashing watchdogs), safe runtime
+  mutation of C++ container fields (why blind-writing a std::string
+  corrupts the heap; swap-the-assignment-source hijack primitive),
+  plus the five-layer verification protocol and the subtleties that bite
   first-timers (universal binary offsets, ASLR slide arithmetic,
   `/etc/hosts` bypass by userspace DNS, `codesign --deep` sealed
   resources, Hardened Runtime vs App Sandbox, iOS FairPlay encryption,
