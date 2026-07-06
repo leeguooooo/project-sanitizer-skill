@@ -126,6 +126,23 @@ methods in the main executable are almost never. Plan to combine
 metadata extraction with technique #6 (string xrefs) when symbol
 coverage is partial.
 
+**C++ portions leak type info too.** If the binary mixes in C++ (common
+in cross-platform apps and native Electron/RN modules), RTTI is the
+compiler-emitted analog of Swift metadata and survives stripping:
+
+- `c++filt _ZTI7MyClass` demangles a typeinfo symbol to
+  `typeinfo for MyClass`; the typeinfo struct is
+  `{vtable_for_typeinfo, name_string, base_class_ptr}`, so one match
+  hands you the class name *and* its parent.
+- A vtable is `[typeinfo_ptr, destructor, method0, method1, …]`; the
+  polymorphic-dispatch shape is `mov rax,[rdi]; call [rax+N]` (arm64:
+  `ldr x8,[x0]; ldr x9,[x8,#N]; blr x9`). Reconstruct the vtable to
+  name the virtual methods.
+- `std::string` uses its own SSO (≤15 chars inline), layout
+  `{char* ptr, size_t size, union{size_t cap, char buf[16]}}` — the C++
+  cousin of the Swift SSO in technique #6, and it hides short strings
+  from `__cstring` xrefs the same way.
+
 ### 4. Dynamic hooking (runtime over rewrite)
 
 **Use when**: you need fast iteration, or you want symbol-based
@@ -245,6 +262,69 @@ assume.
 
 ---
 
+## When the target resists analysis
+
+A hardened binary doesn't just sit there — it looks for you. If your
+dynamic techniques (#4, #5) silently die, the target is probably
+detecting the tooling rather than crashing on its own. Recognise the
+three families before assuming your setup is broken:
+
+### Anti-debug (macOS)
+
+The macOS-native move is `PT_DENY_ATTACH` — the process calls
+`ptrace(PT_DENY_ATTACH, …)` early, and any subsequent debugger attach
+kills it. It shows up as an early `ptrace` / `syscall` call with a
+first argument of `0x1f` (31). Neutralise it by breakpointing `ptrace`
+before it runs and returning early, or by patching the call site. The
+`sysctl(KERN_PROC, …)` + `P_TRACED` flag check is the passive cousin:
+it reads its own process flags rather than blocking attach, so it needs
+a `sysctl` hook, not a `ptrace` one.
+
+### Anti-DBI (Frida / instrumentation detection)
+
+Directly relevant to technique #4, because Frida is the first tool that
+section reaches for. A target that expects Frida checks for it:
+
+- Scans its own memory map (`/proc/self/maps` on Linux; `dyld`
+  image list / `vm_region` on macOS) for `frida`, `gadget`, `substrate`.
+- Probes Frida's default TCP port (27042) on loopback.
+- Reads the prologue bytes of common libc functions and bails if it
+  sees an inline-hook trampoline (`0xE9`/`0xFF` on x86, a `b`/`br` where
+  a stack-frame setup should be).
+- Enumerates its own threads for Frida's helper names (`gmain`,
+  `gdbus`, `frida-*`).
+
+The bypass is itself a Frida hook — intercept the detection primitive
+(`strstr`/`open`/`fopen`/the map-reader) and lie about the result — or
+switch to a no-instrumentation path entirely (emulation under Qiling,
+or a hardware-breakpoint debugger that never modifies code). If a hook
+that worked yesterday silently stops firing, suspect detection before
+you suspect a stale address.
+
+### Code-integrity / self-hashing watchdogs
+
+This is the mechanism behind verification **layer 5** below — the
+reason a patch that lands cleanly gets reverted 30 seconds later. A
+background thread recomputes a CRC32/SHA-256 over `__text` on a timer
+and, on mismatch, either restores the original bytes, zeroes a secret,
+or exits:
+
+```c
+while (1) {
+    if (crc32(text_start, text_size) != saved_crc) { /* undo / kill */ }
+    usleep(100000);
+}
+```
+
+Any static patch trips it. Options, cheapest first: use hardware
+breakpoints (DR0–DR3 / arm64 watchpoints — they don't modify code so
+the hash stays valid), hook the hash function to return the expected
+value, kill the watchdog thread, or emulate instead of patch. Whichever
+you pick, layer-5 stability testing is what *reveals* the watchdog in
+the first place — so never skip it.
+
+---
+
 ## Verification: the five layers
 
 After any non-trivial change — a patch, a hook, a configuration tweak —
@@ -297,6 +377,22 @@ some other path rewrites the value 30 seconds later".
   `DYLD_INSERT_LIBRARIES`), not because of App Sandbox (which
   restricts filesystem and IPC). Check `codesign -d --entitlements
   -` to know which constraint you're hitting.
+- **An App Store iOS binary is encrypted — static analysis returns
+  garbage until you decrypt.** FairPlay DRM leaves the on-disk
+  `__TEXT` encrypted; `strings`/`class-dump`/Ghidra all see noise.
+  Check first: `otool -l <bin> | grep -A4 LC_ENCRYPTION_INFO` — a
+  `cryptid` of `1` means encrypted. You must dump the decrypted image
+  from a running process on a jailbroken device (`frida-ios-dump`,
+  Clutch, bfdecrypt) before any of the technique catalogue applies.
+  macOS apps and Simulator builds are not FairPlay-encrypted, so this
+  bites only on real-device iOS work.
+- **Jailbreak detection blocks the device you were going to analyse
+  on.** Before a target even reaches its policy code it may check for
+  `/Applications/Cydia.app`, `/bin/sh`, `/private/var/lib/apt`, a
+  successful `fork()`, or substrate/substitute images, and refuse to
+  run. It's the same obstacle class as anti-DBI: hook the probe
+  (`access`/`stat`/`fopen`) and return "not found", or run on a device
+  whose jailbreak is already hidden.
 
 ---
 
@@ -332,3 +428,10 @@ binary. The runbook accelerates from "weeks" to "hours".
   metadata layout your tools surface.
 - Frida documentation — `frida-trace` is the single best teaching
   tool for "what does this binary actually call at runtime".
+
+---
+
+*The anti-analysis, iOS FairPlay, and C++ RTTI/SSO notes adapt
+platform-specific techniques from
+[`zhaoxuya520/reverse-skill`](https://github.com/zhaoxuya520/reverse-skill)
+(MIT), narrowed to the macOS/iOS + Swift scope of this document.*

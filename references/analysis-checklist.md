@@ -31,6 +31,9 @@ otool -L <bin>                   # linked libraries
 # Signature posture
 codesign -dv --verbose=4 <bin>
 codesign -d --entitlements - <bin>
+
+# iOS only: is __TEXT FairPlay-encrypted? (cryptid 1 = decrypt before analysing)
+otool -l <bin> | grep -A4 LC_ENCRYPTION_INFO
 ```
 
 ## Finding the right function (in order of effort)
@@ -59,6 +62,21 @@ codesign -d --entitlements - <bin>
   not as a hex blob. Make it idempotent — every patch sanity-checks
   the byte before writing.
 - Always write a reapply script before the second patch you make.
+
+## If dynamic techniques silently die (target is fighting back)
+
+- [ ] **Anti-debug** — early `ptrace(0x1f=PT_DENY_ATTACH)` or
+  `sysctl` + `P_TRACED`. Breakpoint `ptrace`/`sysctl`, return early.
+- [ ] **Anti-DBI** — target scans image list for `frida`/`substrate`,
+  probes port 27042, checks libc prologues for hook trampolines, or
+  reads thread names (`gmain`, `gdbus`). Hook the probe or emulate.
+- [ ] **Self-hashing watchdog** — background thread CRCs `__text` on a
+  timer and reverts/kills on mismatch. This is *why* a landed patch
+  reverts (layer 5). Use HW breakpoints, hook the hash, or kill the
+  thread.
+
+A hook that fired yesterday and silently stops today = suspect
+detection before a stale address.
 
 ## Verification (do all five)
 

@@ -1,6 +1,6 @@
 ---
 name: project-sanitizer
-description: Binary analysis methodology + project sanitization workflow. Phase 1 covers the analysis playbook (function fingerprinting, XREF chokepoint heuristic, Swift/ObjC metadata exploitation, dynamic hooking trade-offs, backtrace at symptom, string xrefs incl. Swift small-string-optimization, differential analysis, observation-system awareness) and the five-layer verification protocol. Phase 2 removes sensitive analysis artifacts and replaces internal RE terminology with neutral project language before sharing. Use for binary analysis, RE workflows, security audits, '反汇编', '逆向', '脱敏'.
+description: Binary analysis methodology + project sanitization workflow. Phase 1 covers the analysis playbook (function fingerprinting, XREF chokepoint heuristic, Swift/ObjC metadata + C++ RTTI exploitation, dynamic hooking trade-offs, backtrace at symptom, string xrefs incl. Swift small-string-optimization, differential analysis, observation-system awareness, anti-analysis awareness for Frida/self-hashing/PT_DENY_ATTACH, iOS FairPlay decryption) and the five-layer verification protocol. Phase 2 removes sensitive analysis artifacts and replaces internal RE terminology with neutral project language before sharing. Use for binary analysis, RE workflows, security audits, '反汇编', '逆向', '脱敏'.
 ---
 
 # Project Sanitizer & Analysis Assistant
@@ -22,13 +22,16 @@ Methodology guidance lives in `references/`:
 
 - **`references/analysis-methodology.md`** — eight transferable
   techniques (function fingerprinting, XREF chokepoint heuristic,
-  Swift/ObjC metadata exploitation, dynamic hooking choices,
+  Swift/ObjC metadata + C++ RTTI exploitation, dynamic hooking choices,
   backtrace-at-symptom, string xrefs incl. Swift SSO inline imm,
-  differential analysis, observation-system awareness) plus the
+  differential analysis, observation-system awareness), a
+  "when the target resists analysis" section (macOS anti-debug,
+  Frida/anti-DBI detection, self-hashing watchdogs), plus the
   five-layer verification protocol and the subtleties that bite
   first-timers (universal binary offsets, ASLR slide arithmetic,
   `/etc/hosts` bypass by userspace DNS, `codesign --deep` sealed
-  resources, Hardened Runtime vs App Sandbox).
+  resources, Hardened Runtime vs App Sandbox, iOS FairPlay encryption,
+  jailbreak-detection obstacles).
 - **`references/analysis-checklist.md`** — condensed cheat sheet of
   the same material; keep open during an audit.
 
