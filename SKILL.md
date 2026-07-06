@@ -76,6 +76,13 @@ Run this phase before sharing with Claude Code or uploading to GitHub.
 - Extracts strings, exported symbols, and library dependencies from a target binary.
 - Outputs results to an `analysis/` folder (which is later scrubbed by the sanitizer).
 
+### scripts/lldb_std_string_field.py
+- LLDB helpers for inspecting and safely mutating a libc++ `std::string`
+  field reached through a register. `sstr_dump` (read-only decode + vtable
+  typing, run across fires to detect register aliasing) and `sstr_set`
+  (crash-safe rebuild: reads the old flag, frees the old heap buffer),
+  plus the documented swap-the-assignment-source hijack pattern.
+
 ### references/analysis-methodology.md
 - Long-form methodology for binary analysis (security audit, legacy
   archaeology, third-party SDK due diligence, crash investigation).
