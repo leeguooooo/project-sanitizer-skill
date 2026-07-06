@@ -262,6 +262,36 @@ assume.
 
 ---
 
+## AI-assisted analysis (use it, but verify)
+
+An LLM is now a legitimate accelerant for the tedious parts of this
+work — provided you never trust its output unchecked. Two uses pay off:
+
+- **Signature / semantic recovery where symbols are missing.** This
+  directly relieves the technique-#3 ceiling: on undocumented macOS
+  private frameworks and stripped ObjC, feeding call-site *usage
+  patterns* to an LLM to infer method signatures and parameter types
+  has been reported to lift ObjC signature recovery from ~15% (pure
+  static) to ~86% (the MOTIF approach). The same works for renaming
+  decompiled functions, guessing struct layouts, and identifying a
+  crypto primitive from its round structure and constants.
+- **Neural decompilation with a verification loop.** LLM-to-source
+  tools are only trustworthy when closed against ground truth:
+  decompile → recompile → diff/behaviour-compare against the original,
+  and feed failures back. The feedback loop, not model size, is what
+  makes the output usable; treat any un-recompiled LLM decompilation as
+  a hypothesis, not a result.
+
+**Hard limits — do not paper over these:** virtualized/VM-obfuscated
+code, indirect calls (vtables, function pointers), aggressive inlining,
+and functions past the context window all defeat current tools. And the
+sanitization rule still applies: **do not paste a confidential target's
+bytes or decompilation into a third-party model** any more than you'd
+upload it to a cloud deobfuscator — use a local model for sensitive
+work.
+
+---
+
 ## When the target resists analysis
 
 A hardened binary doesn't just sit there — it looks for you. If your

@@ -1,6 +1,6 @@
 ---
 name: project-sanitizer
-description: Binary analysis methodology + project sanitization workflow. Phase 1 covers the analysis playbook (function fingerprinting, XREF chokepoint heuristic, Swift/ObjC metadata + C++ RTTI exploitation, dynamic hooking trade-offs, backtrace at symptom, string xrefs incl. Swift small-string-optimization, differential analysis, observation-system awareness, anti-analysis awareness for Frida/self-hashing/PT_DENY_ATTACH, iOS FairPlay decryption) and the five-layer verification protocol. Phase 2 removes sensitive analysis artifacts and replaces internal RE terminology with neutral project language before sharing. Use for binary analysis, RE workflows, security audits, '反汇编', '逆向', '脱敏'.
+description: Binary analysis methodology + project sanitization workflow. Phase 1 covers the analysis playbook (function fingerprinting, XREF chokepoint heuristic, Swift/ObjC metadata + C++ RTTI exploitation, dynamic hooking trade-offs, backtrace at symptom, string xrefs incl. Swift small-string-optimization, differential analysis, observation-system awareness, anti-analysis awareness for Frida/self-hashing/PT_DENY_ATTACH, iOS FairPlay decryption, AI-assisted signature recovery), the five-layer verification protocol, OLLVM-family deobfuscation (Hikari/O-MVLL/goron/Pluto), and packaged desktop app analysis (Electron ASAR, Tauri Brotli). Phase 2 removes sensitive analysis artifacts and replaces internal RE terminology with neutral project language before sharing. Use for binary analysis, RE workflows, security audits, deobfuscation, '反汇编', '逆向', '脱敏'.
 ---
 
 # Project Sanitizer & Analysis Assistant
@@ -34,6 +34,14 @@ Methodology guidance lives in `references/`:
   jailbreak-detection obstacles).
 - **`references/analysis-checklist.md`** — condensed cheat sheet of
   the same material; keep open during an audit.
+- **`references/deobfuscation.md`** — recovery playbook for
+  OLLVM-family protected ARM64 dylibs (Hikari/O-MVLL/goron/Pluto
+  variant identification, layered bcf→fla→sub deflattening, tool
+  selection, MBA simplification). Commercial iOS/macOS apps ship these.
+- **`references/packaged-app-analysis.md`** — unwrapping hybrid macOS
+  desktop apps (Electron ASAR, Tauri Brotli, Node native modules)
+  before the Mach-O methodology applies; runtime introspection of
+  obfuscated JS.
 
 Read the methodology before reaching for a disassembler. Most
 "this binary behaves weirdly" tickets resolve at the configuration
@@ -77,3 +85,15 @@ Run this phase before sharing with Claude Code or uploading to GitHub.
 - Operational cheat sheet for an analyst doing an audit: initial
   recon commands, function-finding decision tree, patch verification
   matrix, Mach-O section reference, universal-binary offset arithmetic.
+
+### references/deobfuscation.md
+- Recovery playbook for OLLVM-family protected ARM64 dylibs: variant
+  identification (Hikari/O-MVLL/goron/Arkari/Pluto/Polaris), the three
+  core passes (fla/bcf/sub), layered deflattening order, tool decision
+  table with a cloud-upload sensitivity caveat, and MBA identities.
+
+### references/packaged-app-analysis.md
+- Unwrapping hybrid macOS desktop apps before the Mach-O methodology
+  applies: Electron ASAR extraction, obfuscated-JS runtime
+  introspection, Tauri Brotli asset recovery, and a "where the logic
+  actually lives" map so you don't reverse the launcher.
