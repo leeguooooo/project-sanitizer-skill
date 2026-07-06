@@ -403,12 +403,6 @@ value-typed field (`std::vector`, `shared_ptr` control blocks, Swift
 class-backed properties): patch through the type's own mutation path, not
 by poking its representation.
 
-`scripts/lldb_std_string_field.py` is a reusable LLDB skeleton for this:
-`sstr_dump` reads and types the object (run it across fires to detect
-register aliasing), `sstr_set` does the crash-safe rebuild (reads the old
-flag, frees the old heap buffer), and the module documents the
-swap-the-assignment-source pattern.
-
 ---
 
 ## Verification: the five layers
